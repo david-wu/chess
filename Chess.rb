@@ -1,54 +1,25 @@
+require "debugger"
+
+# Change deltas to class constants
+# Override to_s, not inspect (no @display)
+
 class Piece
+  attr_accessor :color
+
   def initialize(color, pos_x, pos_y, board)
     @color = color
     @pos_x = pos_x
     @pos_y = pos_y
     @board = board
     board[@pos_x][@pos_y] = self
-    @legal_moves = []
   end
-
-  def legal_moves
-    raise NotYetImplemented
-  end
-
 
   def move(new_pos)
-    if @legal_moves.include?(new_pos)
+    if legal_moves.include?(new_pos)
       @board[@pos_x][@pos_y] = nil
       @pos_x, @pos_y = new_pos[0], new_pos[1]
       @board[@pos_x][@pos_y] = self
     end
-  end
-
-  def move_legal?()
-    raise NotYetImplemented
-  end
-end
-
-class SlidingPiece < Piece
-
-  def initialize(color, pos_x, pos_y, board)
-    super(color, pos_x, pos_y, board)
-    @DELTAS = nil
-  end
-
-  def legal_moves
-    @DELTAS.each { |delta| check_lines(delta) }
-  end
-
-  def check_line(delta)
-    candidate_x = @pos_x+delta[0]
-    candidate_y = @pos_y+delta[1]
-
-    #returns possible moves in a line
-    while legal_move?([candidate_x, candidate_y])
-      @legal_moves << [candidate_x, candidate_y]
-      break if !@board[[candidate_x,candidate_y]].nil? && (@board[[candidate_x,candidate_y]].color != @color)
-      candidate_x, candidate_y = candidate_x + delta[0], candidate_y + delta[1]
-    end
-
-    @legal_moves
   end
 
   def legal_move?(pos)
@@ -58,41 +29,149 @@ class SlidingPiece < Piece
     return false if !@board[pos].nil? && @color == @board[pos].color
     true
   end
+
+  def legal_moves
+    raise NotYetImplemented
+  end
+end
+
+class SlidingPiece < Piece
+
+  def legal_move?(pos)
+    super(pos)
+  end
+
+  def legal_moves
+    moves = []
+    self.class::DELTAS.each { |delta| moves += check_line(delta) }
+    moves
+  end
+
+  #returns possible moves in a line
+  def check_line(delta)
+    candidate_x = @pos_x+delta[0]
+    candidate_y = @pos_y+delta[1]
+    moves = []
+    next_pos = [candidate_x, candidate_y]
+
+    while legal_move?(next_pos)
+      moves << next_pos.dup
+      break if !@board[next_pos].nil? && (@board[next_pos].color != @color)
+      next_pos[0], next_pos[1] = next_pos[0] + delta[0], next_pos[1] + delta[1]
+    end
+    moves
+  end
 end
 
 class Bishop < SlidingPiece
+  DELTAS =[[1,1],[-1,-1],[1,-1],[-1,1]]
 
-  def initialize(color, pos_x, pos_y, board)
-    super(color, pos_x, pos_y, board)
-    @DELTAS =[[1,1],[-1,-1],[1,-1],[-1,1]]
-    @display = "B"
+  def to_s
+    "B"
   end
+end
+
+class Rook < SlidingPiece
+  DELTAS =[[1,0],[0,1],[0,-1],[-1,0]]
 
   def inspect
-    @display
+    "R"
+  end
+end
+
+class Queen < SlidingPiece
+  DELTAS =[[1,1],[-1,-1],[1,-1],[-1,1],[1,0],[0,1],[0,-1],[-1,0]]
+
+  def inspect
+    "Q"
+  end
+end
+
+class SteppingPiece < Piece
+
+  def legal_move?(pos)
+    super(pos)
+  end
+
+  def legal_moves
+    moves = self.class::DELTAS.map{ |delta| [ delta[0] + @pos_x, delta[1] + @pos_y] }
+    if moves
+      moves.select! { |pos| legal_move?(pos) }
+    end
+    moves
   end
 
 end
 
-class SteppingPiece
+class King < SteppingPiece
+  DELTAS = [[1,1],[-1,-1],[1,-1],[-1,1],[1,0],[0,1],[0,-1],[-1,0]]
 
+  def inspect
+    "K"
+  end
 end
 
-class Pawn
+class Knight < SteppingPiece
+  DELTAS = [[2,1],[-2,-1],[2,-1],[-2,1],[1,2],[1,-2],[-1,2],[-1,-2]]
+
+  def inspect
+    "N"
+  end
 end
 
+class Pawn < Piece
+
+  def legal_moves
+    @color == "white" ? x_mod = -1 : x_mod = 1
+    moves = [[x_mod,-1],[x_mod,1]]
+    possible_moves = []
+    moves.each do |pos|
+      next_pos = [@pos_x+pos[0], @pos_y+pos[1]]
+      #if candidate move is not empty and piece is opposite color
+      if (!@board[next_pos].nil?) && (@board[next_pos].color != @color)
+        possible_moves << next_pos
+      end
+    end
+
+    next_pos = [@pos_x+x_mod, @pos_y]
+    if @board[next_pos].nil?
+      possible_moves << next_pos
+    end
+
+    if @color == "white" && @pos_x == 6
+      possible_moves << [4 , @pos_y] if @board[[4, @pos_y]].nil?
+    end
+    if @color == "black" && @pos_x == 1
+      possible_moves << [3 , @pos_y] if @board[[3, @pos_y]].nil?
+    end
+
+
+    possible_moves
+  end
+
+
+  def inspect
+    "P"
+  end
+end
 
 
 class Board < Array
   def initialize
     super(8){Array.new(8)}
-    self[4][4]='pig'
   end
 
-  def inspect
+  def to_s
     print_string = ''
     self.each do |row|
-      print_string += row.to_s + "\n"
+      row.each do |element|
+        if element.nil?
+          print_string += " _ "
+        else
+          print_string += " #{element} "
+        end
+      end
+      print_string += "\n"
     end
     print_string
   end
@@ -122,4 +201,4 @@ end
 
 
 b = Board.new
-p b
+puts b
