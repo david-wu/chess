@@ -1,10 +1,12 @@
 require "debugger"
+require "set"
+require "colorize"
 
 # Change deltas to class constants
-# Override to_s, not inspect (no @display)
+# Override to_s, not  (no @display)
 
 class Piece
-  attr_accessor :color
+  attr_accessor :color, :pos_x, :pos_y
 
   def initialize(color, pos_x, pos_y, board)
     @color = color
@@ -67,23 +69,23 @@ class Bishop < SlidingPiece
   DELTAS =[[1,1],[-1,-1],[1,-1],[-1,1]]
 
   def to_s
-    "B"
+    @color == "white" ? "\u2657" : "\u265d"
   end
 end
 
 class Rook < SlidingPiece
   DELTAS =[[1,0],[0,1],[0,-1],[-1,0]]
 
-  def inspect
-    "R"
+  def to_s
+    @color == "white" ? "\u2656" : "\u265c"
   end
 end
 
 class Queen < SlidingPiece
   DELTAS =[[1,1],[-1,-1],[1,-1],[-1,1],[1,0],[0,1],[0,-1],[-1,0]]
 
-  def inspect
-    "Q"
+  def to_s
+    @color == "white" ? "\u2655" : "\u265b"
   end
 end
 
@@ -106,16 +108,16 @@ end
 class King < SteppingPiece
   DELTAS = [[1,1],[-1,-1],[1,-1],[-1,1],[1,0],[0,1],[0,-1],[-1,0]]
 
-  def inspect
-    "K"
+  def to_s
+    @color == "white" ? "\u2654" : "\u265a"
   end
 end
 
 class Knight < SteppingPiece
   DELTAS = [[2,1],[-2,-1],[2,-1],[-2,1],[1,2],[1,-2],[-1,2],[-1,-2]]
 
-  def inspect
-    "N"
+  def to_s
+    @color == "white" ? "\u2658" : "\u265e"
   end
 end
 
@@ -150,25 +152,107 @@ class Pawn < Piece
   end
 
 
-  def inspect
-    "P"
+  def to_s
+    @color == "white" ? "\u2659" : "\u265f"
   end
 end
 
 
 class Board < Array
-  def initialize
+
+  attr_accessor :black_pieces, :white_pieces
+
+  def initialize(fill = true)
     super(8){Array.new(8)}
+    fill_board if fill
+  end
+
+  def dup
+    dup_board = Board.new(false)
+    self.each_with_index do |row, r_i|
+      row.each_with_index do |ele, c_i|
+        unless ele.nil?
+          dup_board[r_i][c_i] = ele.class.new(ele.color, r_i, c_i, dup_board)
+        end
+      end
+    end
+    dup_board
+  end
+
+  def fill_board
+
+    pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+    (0..7).each do |index|
+      self[1][index] = Pawn.new("black", 1, index, self)
+      self[6][index] = Pawn.new("white", 6, index, self)
+      self[0][index] = pieces[index].new("black", 0, index, self)
+      self[7][index] = pieces[index].new("white", 7, index, self)
+    end
+  end
+
+  #filters out legal moves that would put in check
+  def filter_moves(piece)
+
+    moves = piece.legal_moves
+    moves.reject! do |move|
+      dup_board = self.dup
+      duped_piece = dup_board[[piece.pos_x,piece.pos_y]]
+      duped_piece.move(move)
+      dup_board.check?(duped_piece.color)
+    end
+    moves
+  end
+
+  def all_pieces
+    pieces = []
+    (0..7).each do |row|
+      self[row].each_with_index do |element, index|
+        pieces << element unless element.nil?
+      end
+    end
+    pieces
+  end
+
+  def check?(color)
+    king_pos = []
+    all_possible_moves = Set.new
+
+    self.all_pieces.each do |piece|
+      if piece.is_a?(King) && piece.color == color
+          king_pos = [piece.pos_x, piece.pos_y]
+      elsif piece.color != color
+          all_possible_moves += piece.legal_moves
+      end
+    end
+
+    return true if all_possible_moves.include?(king_pos)
+    false
+  end
+
+
+  def checkmate?(player)
+
+    self.all_pieces.each do |piece|
+      if player == "white"
+        return false unless filter_moves(piece)
+      elsif player == "black"
+        return false unless filter_moves(piece)
+      end
+    end
+    true
   end
 
   def to_s
+    system('clear')
     print_string = ''
-    self.each do |row|
+    puts "  0  1  2  3  4  5  6  7"
+    self.each_with_index do |row, index|
+      print_string += "#{index}"
       row.each do |element|
         if element.nil?
-          print_string += " _ "
+          print_string += " \u2610 "
         else
-          print_string += " #{element} "
+          print_string += " #{element.to_s} "
         end
       end
       print_string += "\n"
@@ -199,6 +283,57 @@ class Board < Array
 
 end
 
+class Game
+  def initialize
+    @board = Board.new
+    @p1 = "white"
+    @p2 = "black"
+  end
+  def run
 
-b = Board.new
-puts b
+    [@p1, @p2].cycle do |player|
+      take_turn(player)
+      break if false
+    end
+
+  end
+
+  def take_turn(player)
+
+    if @board.check?(player)
+      puts "#{player} is in check"
+      if @board.checkmate?(player)
+        "#{player} Checkmate"
+      end
+    end
+
+
+    print @board
+    begin
+      puts "#{player}, move which piece? (x,y)"
+      start_pos = gets.chomp.split(',').map(&:to_i)
+
+      puts "#{player}, move piece where? (x,y)"
+      end_pos = gets.chomp.split(',').map(&:to_i)
+
+      if @board[start_pos].nil? || @board[start_pos].color != player
+        raise ArgumentError "No piece at #{start_pos}"
+      end
+
+      unless @board.filter_moves(@board[start_pos]).include?(end_pos)
+        raise ArgumentError
+      end
+    rescue
+      system('clear')
+      print @board
+      puts "#{start_pos} to #{end_pos} is not a valid move. Try again."
+      retry
+    end
+
+    @board[start_pos].move(end_pos)
+  end
+end
+
+game = Game.new
+game.run
+print b
