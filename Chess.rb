@@ -7,8 +7,8 @@ require_relative "board"
 class Game
   def initialize
     @board = Board.new
-    @p1 = "white"
-    @p2 = "black"
+    @p1 = :white
+    @p2 = :black
     @checkmate= false
   end
   def run
@@ -21,6 +21,8 @@ class Game
 
   def take_turn(player)
 
+    player_name = player.to_s.capitalize
+
     system('clear')
     print @board
     if @board.check?(player)
@@ -28,14 +30,14 @@ class Game
         puts "Checkmate!"
         return false
       end
-      puts "#{player.capitalize} is in check."
+      puts "#{player_name} is in check."
     end
 
     begin
-      puts "#{player.capitalize}, move which piece? (x,y)"
+      puts "#{player_name}, move which piece? (x,y)"
       start_pos = gets.chomp.split(',').map(&:to_i)
 
-      puts "#{player.capitalize}, move piece where? (x,y)"
+      puts "#{player_name}, move piece where? (x,y)"
       end_pos = gets.chomp.split(',').map(&:to_i)
 
       if @board[start_pos].nil? || @board[start_pos].color != player

@@ -3,7 +3,7 @@ require_relative "piece"
 class Pawn < Piece
 
   def legal_moves
-    @color == "white" ? x_mod = -1 : x_mod = 1
+    @color == :white ? x_mod = -1 : x_mod = 1
     moves = [[x_mod,-1],[x_mod,1]]
     possible_moves = []
     moves.each do |pos|
@@ -19,10 +19,10 @@ class Pawn < Piece
       possible_moves << next_pos
     end
 
-    if @color == "white" && @pos_x == 6
+    if @color == :white && @pos_x == 6
       possible_moves << [4 , @pos_y] if @board[[4, @pos_y]].nil?
     end
-    if @color == "black" && @pos_x == 1
+    if @color == :black && @pos_x == 1
       possible_moves << [3 , @pos_y] if @board[[3, @pos_y]].nil?
     end
 
@@ -32,6 +32,6 @@ class Pawn < Piece
 
 
   def to_s
-    @color == "white" ? "\u265f".colorize(:light_white) : "\u265f".colorize(:black)
+    @color == :white ? "\u265f".colorize(:light_white) : "\u265f".colorize(:black)
   end
 end

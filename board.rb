@@ -25,10 +25,10 @@ class Board < Array
 
     pieces = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
     (0..7).each do |index|
-      self[1][index] = Pawn.new("black", 1, index, self)
-      self[6][index] = Pawn.new("white", 6, index, self)
-      self[0][index] = pieces[index].new("black", 0, index, self)
-      self[7][index] = pieces[index].new("white", 7, index, self)
+      self[1][index] = Pawn.new(:black, 1, index, self)
+      self[6][index] = Pawn.new(:white, 6, index, self)
+      self[0][index] = pieces[index].new(:black, 0, index, self)
+      self[7][index] = pieces[index].new(:white, 7, index, self)
     end
   end
 
@@ -75,9 +75,9 @@ class Board < Array
   def checkmate?(player)
 
     self.all_pieces.each do |piece|
-      if player == "white" && piece.color == "white"
+      if player == :white && piece.color == :white
         return false unless filter_moves(piece).empty?
-      elsif player == "black" && piece.color == "black"
+      elsif player == :black && piece.color == :black
         return false unless filter_moves(piece).empty?
       end
     end
@@ -86,23 +86,23 @@ class Board < Array
 
   def to_s
     print_string = ''
-    place_color = "white"
+    place_color = :white
 
     puts "  0 1 2 3 4 5 6 7"
     self.each_with_index do |row, index|
       print_string += "#{index}"
       row.each do |element|
         print_string += add_square(place_color, element)
-        place_color == "white" ? place_color = "black" : place_color = "white"
+        place_color == :white ? place_color = :black : place_color = :white
       end
       print_string += "\n"
-      place_color == "white" ? place_color = "black" : place_color = "white"
+      place_color == :white ? place_color = :black : place_color = :white
     end
     print_string
   end
 
   def add_square(color, element)
-    if color == "white"
+    if color == :white
       if element.nil?
        return "  ".colorize( :background => :white)
       else
