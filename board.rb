@@ -18,6 +18,7 @@ class Board < Array
         end
       end
     end
+
     dup_board
   end
 
@@ -42,16 +43,18 @@ class Board < Array
       duped_piece.move(move)
       dup_board.check?(duped_piece.color)
     end
+
     moves
   end
 
   def all_pieces
     pieces = []
-    (0..7).each do |row|
-      self[row].each_with_index do |element, index|
+    self.each do |row|
+      row.each do |element|
         pieces << element unless element.nil?
       end
     end
+
     pieces
   end
 
@@ -117,6 +120,7 @@ class Board < Array
     end
   end
 
+  #allows use of coordinates at [x,y] rather than [x][y]
   def [](pos)
     if pos.is_a?(Fixnum)
       super(pos)
